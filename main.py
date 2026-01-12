@@ -885,8 +885,23 @@ class LeptospirosisApp:
         if not self.edit_data:
             return
         
-        # Clear form first
-        self.clear_yearly_form()
+        # Save edit data temporarily (clear_yearly_form resets it)
+        temp_edit_data = self.edit_data.copy()
+        
+        # Clear form fields
+        self.year_entry.delete(0, tk.END)
+        self.year_pop_entry.delete(0, tk.END)
+        self.cases_entry.delete(0, tk.END)
+        self.is_flooded_var.set(False)
+        self.is_evac_var.set(False)
+        self.is_damaged_var.set(False)
+        self.irregular_garbage_var.set(False)
+        self.high_rodents_var.set(False)
+        self.clogged_drainage_var.set(False)
+        
+        # Restore edit data and mode
+        self.edit_data = temp_edit_data
+        self.edit_mode = True
         
         # Set barangay
         barangays = [b[1] for b in self.db.get_barangays()]
