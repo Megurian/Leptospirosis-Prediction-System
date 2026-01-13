@@ -1,6 +1,8 @@
 import sqlite3
 import numpy as np
 from scipy.integrate import odeint
+import csv
+from tkinter import filedialog
 import matplotlib
 matplotlib.use('TkAgg')  # Ensure correct backend for Tkinter
 import matplotlib.pyplot as plt
@@ -51,6 +53,12 @@ class Database:
                 population INTEGER,
                 total_cases INTEGER,
                 flood_severity REAL,
+                is_flooded INTEGER DEFAULT 0,
+                is_evacuation INTEGER DEFAULT 0,
+                is_infrastructure_damage INTEGER DEFAULT 0,
+                irregular_garbage INTEGER DEFAULT 0,
+                high_rodents INTEGER DEFAULT 0,
+                clogged_drainage INTEGER DEFAULT 0,
                 FOREIGN KEY(barangay_id) REFERENCES barangays(id),
                 UNIQUE(barangay_id, year)
             )
@@ -74,6 +82,18 @@ class Database:
                 WHERE population IS NULL
             """)
             self.conn.commit()
+        
+        # Migration: Add individual risk factor columns if they don't exist
+        risk_columns = [
+            'is_flooded', 'is_evacuation', 'is_infrastructure_damage',
+            'irregular_garbage', 'high_rodents', 'clogged_drainage'
+        ]
+        for col in risk_columns:
+            try:
+                self.cursor.execute(f"SELECT {col} FROM yearly_data LIMIT 1")
+            except sqlite3.OperationalError:
+                self.cursor.execute(f"ALTER TABLE yearly_data ADD COLUMN {col} INTEGER DEFAULT 0")
+        self.conn.commit()
 
     def add_barangay(self, name, population):
         try:
@@ -92,7 +112,9 @@ class Database:
         except Exception as e:
             return False, f"Error: {e}"
 
-    def add_year_data(self, b_name, year, population, cases, flood_severity):
+    def add_year_data(self, b_name, year, population, cases, flood_severity, 
+                     is_flooded=0, is_evac=0, is_damage=0, 
+                     irregular_garbage=0, high_rodents=0, clogged_drainage=0):
         self.cursor.execute("SELECT id FROM barangays WHERE name=?", (b_name,))
         result = self.cursor.fetchone()
         if not result:
@@ -101,9 +123,14 @@ class Database:
         
         try:
             self.cursor.execute("""
-                INSERT OR REPLACE INTO yearly_data (barangay_id, year, population, total_cases, flood_severity)
-                VALUES (?, ?, ?, ?, ?)
-            """, (b_id, year, population, cases, flood_severity))
+                INSERT OR REPLACE INTO yearly_data 
+                (barangay_id, year, population, total_cases, flood_severity,
+                 is_flooded, is_evacuation, is_infrastructure_damage,
+                 irregular_garbage, high_rodents, clogged_drainage)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (b_id, year, population, cases, flood_severity,
+                  is_flooded, is_evac, is_damage, 
+                  irregular_garbage, high_rodents, clogged_drainage))
             self.conn.commit()
             return True, f"Data for {b_name} ({year}) saved."
         except Exception as e:
@@ -116,7 +143,9 @@ class Database:
     def get_yearly_data(self, b_name=None):
         if b_name:
             self.cursor.execute("""
-                SELECT b.name, y.year, y.population, y.total_cases, y.flood_severity
+                SELECT b.name, y.year, y.population, y.total_cases, y.flood_severity,
+                       y.is_flooded, y.is_evacuation, y.is_infrastructure_damage,
+                       y.irregular_garbage, y.high_rodents, y.clogged_drainage
                 FROM yearly_data y
                 JOIN barangays b ON y.barangay_id = b.id
                 WHERE b.name = ?
@@ -124,7 +153,9 @@ class Database:
             """, (b_name,))
         else:
             self.cursor.execute("""
-                SELECT b.name, y.year, y.population, y.total_cases, y.flood_severity
+                SELECT b.name, y.year, y.population, y.total_cases, y.flood_severity,
+                       y.is_flooded, y.is_evacuation, y.is_infrastructure_damage,
+                       y.irregular_garbage, y.high_rodents, y.clogged_drainage
                 FROM yearly_data y
                 JOIN barangays b ON y.barangay_id = b.id
                 ORDER BY b.name, y.year DESC
@@ -302,6 +333,7 @@ class LeptospirosisApp:
         # Create tabs
         self.create_barangay_tab()
         self.create_yearly_data_tab()
+        self.create_import_csv_tab()
         self.create_simulation_tab()
         self.create_prediction_tab()
         self.create_view_data_tab()
@@ -430,6 +462,397 @@ class LeptospirosisApp:
         self.save_data_btn = ttk.Button(btn_frame, text="Save Data", command=self.add_yearly_data)
         self.save_data_btn.pack(side='left', padx=5)
         ttk.Button(btn_frame, text="Clear", command=self.clear_yearly_form).pack(side='left', padx=5)
+    
+    def create_import_csv_tab(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Import CSV Data")
+        
+        # Instructions Frame
+        instructions_frame = ttk.LabelFrame(tab, text="CSV Format Guide", padding=15)
+        instructions_frame.pack(fill='x', padx=20, pady=10)
+        
+        guide_text = """REQUIRED CSV FORMAT:
+
+The CSV file must contain the following columns (in any order):
+
+BASIC COLUMNS:
+• Barangay - Name of the barangay (text)
+• Year - Year of the data (integer, e.g., 2023)
+• Population - Population for that year (positive integer)
+• Cases - Total leptospirosis cases (non-negative integer)
+
+RISK FACTOR COLUMNS (ALL REQUIRED):
+• Flooded - Is area flooded? (Yes/No or 1/0)
+• Evacuation - Evacuation needed? (Yes/No or 1/0)
+• Infrastructure_Damage - Infrastructure/Agriculture damage? (Yes/No or 1/0)
+• Irregular_Garbage - Irregular garbage collection? (Yes/No or 1/0)
+• High_Rodents - High rodent/stray presence? (Yes/No or 1/0)
+• Clogged_Drainage - Clogged/open drainage? (Yes/No or 1/0)
+
+EXAMPLE CSV FORMAT:
+Barangay,Year,Population,Cases,Flooded,Evacuation,Infrastructure_Damage,Irregular_Garbage,High_Rodents,Clogged_Drainage
+San Jose,2022,15000,12,Yes,No,Yes,Yes,No,Yes
+San Jose,2023,15500,8,Yes,No,No,No,No,Yes
+Santa Maria,2022,12000,5,No,No,No,Yes,Yes,No
+Santa Maria,2023,12300,3,No,No,No,No,No,No
+
+NOTES:
+• Column headers are case-insensitive
+• Use Yes/No, Y/N, 1/0, or True/False for risk factors
+• Composite Risk Index will be calculated automatically
+• Barangays will be auto-created if they don't exist
+• Existing data will be updated (not duplicated)
+• Empty rows will be skipped
+        """
+        
+        guide_label = tk.Text(instructions_frame, height=22, width=100, wrap='word', 
+                             font=('Courier', 9), relief='solid', borderwidth=1)
+        guide_label.insert('1.0', guide_text)
+        guide_label.config(state='disabled', bg='#f5f5f5')
+        guide_label.pack(fill='both', expand=True)
+        
+        # File selection frame
+        file_frame = ttk.LabelFrame(tab, text="Select CSV File", padding=15)
+        file_frame.pack(fill='x', padx=20, pady=10)
+        
+        file_control_frame = ttk.Frame(file_frame)
+        file_control_frame.pack(fill='x')
+        
+        ttk.Label(file_control_frame, text="File:").pack(side='left', padx=5)
+        self.csv_file_path = tk.StringVar()
+        ttk.Entry(file_control_frame, textvariable=self.csv_file_path, width=60, state='readonly').pack(side='left', padx=5)
+        ttk.Button(file_control_frame, text="Browse...", command=self.browse_csv_file).pack(side='left', padx=5)
+        ttk.Button(file_control_frame, text="Download Template", command=self.download_csv_template).pack(side='left', padx=5)
+        
+        # Preview frame
+        preview_frame = ttk.LabelFrame(tab, text="Data Preview", padding=15)
+        preview_frame.pack(fill='both', expand=True, padx=20, pady=10)
+        
+        # Preview controls
+        preview_controls = ttk.Frame(preview_frame)
+        preview_controls.pack(fill='x', pady=(0, 10))
+        
+        ttk.Button(preview_controls, text="Load & Preview", command=self.load_csv_preview, 
+                  style='Accent.TButton').pack(side='left', padx=5)
+        ttk.Button(preview_controls, text="Clear Preview", command=self.clear_csv_preview).pack(side='left', padx=5)
+        
+        self.csv_status_label = ttk.Label(preview_controls, text="No file loaded", foreground='gray')
+        self.csv_status_label.pack(side='left', padx=20)
+        
+        # Preview tree
+        preview_tree_frame = ttk.Frame(preview_frame)
+        preview_tree_frame.pack(fill='both', expand=True)
+        
+        columns = ('Row', 'Barangay', 'Year', 'Population', 'Cases', 'Composite_Risk', 'Status')
+        self.csv_preview_tree = ttk.Treeview(preview_tree_frame, columns=columns, show='headings', height=10)
+        
+        for col in columns:
+            self.csv_preview_tree.heading(col, text=col)
+            if col == 'Row':
+                self.csv_preview_tree.column(col, width=50)
+            elif col == 'Status':
+                self.csv_preview_tree.column(col, width=200)
+            else:
+                self.csv_preview_tree.column(col, width=100)
+        
+        scrollbar = ttk.Scrollbar(preview_tree_frame, orient='vertical', command=self.csv_preview_tree.yview)
+        self.csv_preview_tree.configure(yscrollcommand=scrollbar.set)
+        
+        self.csv_preview_tree.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+        
+        # Import button
+        import_frame = ttk.Frame(preview_frame)
+        import_frame.pack(fill='x', pady=(10, 0))
+        
+        self.import_btn = ttk.Button(import_frame, text="Import Data to Database", 
+                                    command=self.import_csv_data, state='disabled')
+        self.import_btn.pack(side='left', padx=5)
+        
+        ttk.Label(import_frame, text="⚠ This will add/update records in the database", 
+                 foreground='red', font=('Arial', 9, 'italic')).pack(side='left', padx=10)
+        
+        # Store parsed data for import
+        self.csv_parsed_data = []
+    
+    def browse_csv_file(self):
+        """Open file dialog to select CSV file"""
+        filename = filedialog.askopenfilename(
+            title="Select CSV File",
+            filetypes=[("CSV Files", "*.csv"), ("All Files", "*.*")]
+        )
+        if filename:
+            self.csv_file_path.set(filename)
+            self.csv_status_label.config(text="File selected. Click 'Load & Preview' to validate.", foreground='blue')
+            self.import_btn.config(state='disabled')
+    
+    def download_csv_template(self):
+        """Download a CSV template file"""
+        filename = filedialog.asksaveasfilename(
+            title="Save CSV Template",
+            defaultextension=".csv",
+            filetypes=[("CSV Files", "*.csv")],
+            initialfile="leptospirosis_data_template.csv"
+        )
+        
+        if filename:
+            try:
+                with open(filename, 'w', newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    # Write header with all risk factor columns
+                    writer.writerow(['Barangay', 'Year', 'Population', 'Cases', 
+                                   'Flooded', 'Evacuation', 'Infrastructure_Damage',
+                                   'Irregular_Garbage', 'High_Rodents', 'Clogged_Drainage'])
+                    # Write example rows
+                    writer.writerow(['San Jose', '2022', '15000', '12', 'Yes', 'No', 'Yes', 'Yes', 'No', 'Yes'])
+                    writer.writerow(['San Jose', '2023', '15500', '8', 'Yes', 'No', 'No', 'No', 'No', 'Yes'])
+                    writer.writerow(['Santa Maria', '2022', '12000', '5', 'No', 'No', 'No', 'Yes', 'Yes', 'No'])
+                    writer.writerow(['Santa Maria', '2023', '12300', '3', 'No', 'No', 'No', 'No', 'No', 'No'])
+                
+                messagebox.showinfo("Success", f"Template saved to:\n{filename}\n\nYou can now edit this file with your data.")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save template: {str(e)}")
+    
+    def clear_csv_preview(self):
+        """Clear the preview tree"""
+        for item in self.csv_preview_tree.get_children():
+            self.csv_preview_tree.delete(item)
+        self.csv_status_label.config(text="Preview cleared", foreground='gray')
+        self.csv_parsed_data = []
+        self.import_btn.config(state='disabled')
+    
+    def load_csv_preview(self):
+        """Load and validate CSV file, show preview"""
+        filepath = self.csv_file_path.get()
+        if not filepath:
+            messagebox.showwarning("No File", "Please select a CSV file first")
+            return
+        
+        # Clear previous preview
+        self.clear_csv_preview()
+        
+        try:
+            with open(filepath, 'r', encoding='utf-8-sig') as f:  # utf-8-sig handles BOM
+                reader = csv.DictReader(f)
+                
+                # Normalize headers (lowercase, strip spaces)
+                reader.fieldnames = [h.strip().lower().replace(' ', '_') for h in reader.fieldnames]
+                
+                # Validate required columns
+                required_cols = {'barangay', 'year', 'population', 'cases', 
+                               'flooded', 'evacuation', 'infrastructure_damage',
+                               'irregular_garbage', 'high_rodents', 'clogged_drainage'}
+                headers = set(reader.fieldnames)
+                
+                missing = required_cols - headers
+                if missing:
+                    messagebox.showerror("Invalid Format", 
+                                       f"Missing required columns: {', '.join(missing)}\n\n"
+                                       "Please check the format guide. All risk factor columns are required.")
+                    return
+                
+                # Parse rows
+                valid_count = 0
+                error_count = 0
+                row_num = 1
+                parsed_data = []
+                
+                for row in reader:
+                    row_num += 1  # Account for header
+                    
+                    # Skip empty rows
+                    if not any(row.values()):
+                        continue
+                    
+                    try:
+                        # Extract and validate data
+                        brgy = row['barangay'].strip()
+                        year = int(row['year'])
+                        population = int(row['population'])
+                        cases = int(row['cases'])
+                        
+                        if not brgy:
+                            raise ValueError("Barangay name cannot be empty")
+                        if population <= 0:
+                            raise ValueError("Population must be positive")
+                        if cases < 0:
+                            raise ValueError("Cases cannot be negative")
+                        
+                        # Parse individual risk factors
+                        is_flooded = self._parse_bool(row['flooded'])
+                        is_evacuation = self._parse_bool(row['evacuation'])
+                        is_infrastructure = self._parse_bool(row['infrastructure_damage'])
+                        irregular_garbage = self._parse_bool(row['irregular_garbage'])
+                        high_rodents = self._parse_bool(row['high_rodents'])
+                        clogged_drainage = self._parse_bool(row['clogged_drainage'])
+                        
+                        # Calculate composite risk from factors
+                        f_score = 0.0
+                        if is_flooded:
+                            f_score += 2.0
+                            if is_evacuation:
+                                f_score += 3.0
+                            if is_infrastructure:
+                                f_score += 5.0
+                        
+                        v_score = 1.0
+                        if irregular_garbage:
+                            v_score += 0.5
+                        if high_rodents:
+                            v_score += 0.5
+                        if clogged_drainage:
+                            v_score += 0.5
+                        
+                        composite_risk = f_score * v_score
+                        
+                        # Store parsed data with individual risk factors
+                        parsed_data.append({
+                            'row_num': row_num,
+                            'barangay': brgy,
+                            'year': year,
+                            'population': population,
+                            'cases': cases,
+                            'composite_risk': composite_risk,
+                            'is_flooded': is_flooded,
+                            'is_evacuation': is_evacuation,
+                            'is_infrastructure_damage': is_infrastructure,
+                            'irregular_garbage': irregular_garbage,
+                            'high_rodents': high_rodents,
+                            'clogged_drainage': clogged_drainage,
+                            'status': 'Valid ✓'
+                        })
+                        
+                        # Add to preview with success tag
+                        item_id = self.csv_preview_tree.insert('', 'end', values=(
+                            row_num, brgy, year, population, cases, f"{composite_risk:.2f}", 'Valid ✓'
+                        ), tags=('valid',))
+                        valid_count += 1
+                        
+                    except Exception as e:
+                        error_count += 1
+                        status = f'Error: {str(e)}'
+                        self.csv_preview_tree.insert('', 'end', values=(
+                            row_num, row.get('barangay', '?'), row.get('year', '?'), 
+                            row.get('population', '?'), row.get('cases', '?'), '?', status
+                        ), tags=('error',))
+                
+                # Configure tag colors
+                self.csv_preview_tree.tag_configure('valid', background='#d4edda')
+                self.csv_preview_tree.tag_configure('error', background='#f8d7da')
+                
+                # Update status
+                if error_count > 0:
+                    self.csv_status_label.config(
+                        text=f"Loaded: {valid_count} valid, {error_count} errors. Fix errors before importing.",
+                        foreground='red'
+                    )
+                    self.import_btn.config(state='disabled')
+                else:
+                    self.csv_status_label.config(
+                        text=f"Loaded: {valid_count} valid rows. Ready to import.",
+                        foreground='green'
+                    )
+                    self.import_btn.config(state='normal')
+                    self.csv_parsed_data = parsed_data
+                
+                if valid_count == 0 and error_count == 0:
+                    messagebox.showwarning("Empty File", "No data rows found in CSV file")
+                    
+        except Exception as e:
+            messagebox.showerror("File Error", f"Failed to read CSV file:\n{str(e)}")
+    
+    def _parse_bool(self, value):
+        """Parse boolean values from CSV (Yes/No, 1/0, True/False)"""
+        if not value:
+            return False
+        value = str(value).strip().lower()
+        return value in ('yes', 'y', '1', 'true', 't')
+    
+    def import_csv_data(self):
+        """Import validated CSV data into database"""
+        if not self.csv_parsed_data:
+            messagebox.showwarning("No Data", "No valid data to import")
+            return
+        
+        # Confirm import
+        confirm = messagebox.askyesno(
+            "Confirm Import",
+            f"You are about to import {len(self.csv_parsed_data)} records into the database.\n\n"
+            "Existing records with the same Barangay and Year will be updated.\n"
+            "New barangays will be created automatically.\n\n"
+            "Do you want to proceed?"
+        )
+        
+        if not confirm:
+            return
+        
+        success_count = 0
+        error_count = 0
+        errors = []
+        
+        try:
+            for data in self.csv_parsed_data:
+                try:
+                    # First, ensure barangay exists
+                    self.db.cursor.execute("SELECT id FROM barangays WHERE name=?", (data['barangay'],))
+                    result = self.db.cursor.fetchone()
+                    
+                    if not result:
+                        # Create barangay with initial population from first data point
+                        self.db.add_barangay(data['barangay'], data['population'])
+                    
+                    # Add yearly data with individual risk factors
+                    success, message = self.db.add_year_data(
+                        data['barangay'], 
+                        data['year'], 
+                        data['population'], 
+                        data['cases'], 
+                        data['composite_risk'],
+                        1 if data['is_flooded'] else 0,
+                        1 if data['is_evacuation'] else 0,
+                        1 if data['is_infrastructure_damage'] else 0,
+                        1 if data['irregular_garbage'] else 0,
+                        1 if data['high_rodents'] else 0,
+                        1 if data['clogged_drainage'] else 0
+                    )
+                    
+                    if success:
+                        success_count += 1
+                    else:
+                        error_count += 1
+                        errors.append(f"Row {data['row_num']}: {message}")
+                        
+                except Exception as e:
+                    error_count += 1
+                    errors.append(f"Row {data['row_num']}: {str(e)}")
+            
+            # Show results
+            result_message = f"Import completed:\n\n"
+            result_message += f"✓ Successfully imported: {success_count} records\n"
+            
+            if error_count > 0:
+                result_message += f"✗ Failed: {error_count} records\n\n"
+                result_message += "Errors:\n" + "\n".join(errors[:10])
+                if len(errors) > 10:
+                    result_message += f"\n... and {len(errors) - 10} more errors"
+                messagebox.showwarning("Import Completed with Errors", result_message)
+            else:
+                messagebox.showinfo("Import Successful", result_message)
+            
+            # Refresh all data views
+            self.refresh_barangay_list()
+            self.refresh_barangay_combo()
+            self.refresh_sim_combo()
+            self.refresh_view_combo()
+            self.refresh_pred_combo()
+            self.refresh_data_view()
+            
+            # Clear preview
+            self.clear_csv_preview()
+            self.csv_file_path.set('')
+            
+        except Exception as e:
+            messagebox.showerror("Import Failed", f"An error occurred during import:\n{str(e)}")
     
     def create_simulation_tab(self):
         tab = ttk.Frame(self.notebook)
@@ -770,7 +1193,17 @@ class LeptospirosisApp:
         # Composite Risk Index
         composite_risk = f_score * v_score
         
-        success, message = self.db.add_year_data(brgy, year, population, cases, composite_risk)
+        # Store individual risk factors
+        is_flooded = 1 if self.is_flooded_var.get() else 0
+        is_evac = 1 if self.is_evac_var.get() else 0
+        is_damage = 1 if self.is_damaged_var.get() else 0
+        irregular_garb = 1 if self.irregular_garbage_var.get() else 0
+        high_rod = 1 if self.high_rodents_var.get() else 0
+        clogged_drain = 1 if self.clogged_drainage_var.get() else 0
+        
+        success, message = self.db.add_year_data(brgy, year, population, cases, composite_risk,
+                                                 is_flooded, is_evac, is_damage,
+                                                 irregular_garb, high_rod, clogged_drain)
         
         if success:
             if self.edit_mode:
@@ -812,7 +1245,10 @@ class LeptospirosisApp:
             data = self.db.get_yearly_data(selected)
         
         for row in data:
-            self.data_tree.insert('', 'end', values=row)
+            # row format: (name, year, population, cases, composite_risk, is_flooded, is_evac, is_damage, irregular_garb, high_rod, clogged_drain)
+            # Display only first 5 columns: name, year, population, cases, composite_risk
+            display_row = row[:5]
+            self.data_tree.insert('', 'end', values=display_row)
     
     def show_all_data(self):
         self.view_brgy_combo.current(0)
@@ -852,23 +1288,41 @@ class LeptospirosisApp:
             messagebox.showwarning("No Selection", "Please select a record to edit")
             return
         
-        # Get the selected item's values
+        # Get the selected item's values (displayed: name, year, pop, cases, composite)
         item = self.data_tree.item(selection[0])
         values = item['values']
         brgy_name = values[0]
         year = values[1]
-        population = values[2]
-        cases = values[3]
-        composite_risk = values[4]
         
-        # Store edit mode data
+        # Fetch full data from database including individual risk factors
+        full_data = self.db.get_yearly_data(brgy_name)
+        
+        # Find the matching year
+        selected_record = None
+        for record in full_data:
+            if record[1] == year:  # record[1] is year
+                selected_record = record
+                break
+        
+        if not selected_record:
+            messagebox.showerror("Error", "Could not find record data")
+            return
+        
+        # Store edit mode data with all individual risk factors
+        # record format: (name, year, pop, cases, composite, is_flooded, is_evac, is_damage, irregular_garb, high_rod, clogged_drain)
         self.edit_mode = True
         self.edit_data = {
-            'barangay': brgy_name,
-            'year': year,
-            'population': population,
-            'cases': cases,
-            'composite_risk': composite_risk
+            'barangay': selected_record[0],
+            'year': selected_record[1],
+            'population': selected_record[2],
+            'cases': selected_record[3],
+            'composite_risk': selected_record[4],
+            'is_flooded': selected_record[5],
+            'is_evacuation': selected_record[6],
+            'is_infrastructure_damage': selected_record[7],
+            'irregular_garbage': selected_record[8],
+            'high_rodents': selected_record[9],
+            'clogged_drainage': selected_record[10]
         }
         
         # Switch to Yearly Data Entry tab
@@ -914,48 +1368,13 @@ class LeptospirosisApp:
         self.year_pop_entry.insert(0, str(self.edit_data['population']))
         self.cases_entry.insert(0, str(self.edit_data['cases']))
         
-        # Estimate and set risk factors from composite risk
-        composite = float(self.edit_data['composite_risk'])
-        
-        # Try to reverse-engineer the checkboxes
-        # This is an estimation based on common patterns
-        if composite >= 10.0:
-            self.is_flooded_var.set(True)
-            self.is_evac_var.set(True)
-            self.is_damaged_var.set(True)
-            # Remaining is from vector score
-            remaining = composite / 10.0 - 1.0
-            if remaining >= 0.5:
-                self.irregular_garbage_var.set(True)
-                remaining -= 0.5
-            if remaining >= 0.5:
-                self.high_rodents_var.set(True)
-                remaining -= 0.5
-            if remaining >= 0.5:
-                self.clogged_drainage_var.set(True)
-        elif composite >= 5.0:
-            self.is_flooded_var.set(True)
-            self.is_evac_var.set(True)
-            remaining = composite / 5.0 - 1.0
-            if remaining >= 0.5:
-                self.irregular_garbage_var.set(True)
-                remaining -= 0.5
-            if remaining >= 0.5:
-                self.high_rodents_var.set(True)
-                remaining -= 0.5
-            if remaining >= 0.5:
-                self.clogged_drainage_var.set(True)
-        elif composite >= 2.0:
-            self.is_flooded_var.set(True)
-            remaining = composite / 2.0 - 1.0
-            if remaining >= 0.5:
-                self.irregular_garbage_var.set(True)
-                remaining -= 0.5
-            if remaining >= 0.5:
-                self.high_rodents_var.set(True)
-                remaining -= 0.5
-            if remaining >= 0.5:
-                self.clogged_drainage_var.set(True)
+        # Set risk factors from stored data (no more guessing!)
+        self.is_flooded_var.set(bool(self.edit_data.get('is_flooded', 0)))
+        self.is_evac_var.set(bool(self.edit_data.get('is_evacuation', 0)))
+        self.is_damaged_var.set(bool(self.edit_data.get('is_infrastructure_damage', 0)))
+        self.irregular_garbage_var.set(bool(self.edit_data.get('irregular_garbage', 0)))
+        self.high_rodents_var.set(bool(self.edit_data.get('high_rodents', 0)))
+        self.clogged_drainage_var.set(bool(self.edit_data.get('clogged_drainage', 0)))
         
         # Update composite risk display
         self.update_composite_risk()
