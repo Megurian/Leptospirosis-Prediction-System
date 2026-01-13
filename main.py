@@ -12,6 +12,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import sys
 import os
+from demo_manager import DemoManager
 
 # Get the directory where the script/exe is located
 if getattr(sys, 'frozen', False):
@@ -320,15 +321,27 @@ class LeptospirosisApp:
         self.root.title("Leptospirosis Risk Prediction System")
         self.root.geometry("1000x700")
         
+        # Initialize Demo Manager
+        self.demo_manager = DemoManager(APP_DIR)
+        
+        # Check demo status
+        if not self.demo_manager.initialize_demo():
+            # Demo expired - show lock screen
+            self.show_demo_expired_screen()
+            return
+        
         self.db = Database()
         
         # Edit mode tracking
         self.edit_mode = False
         self.edit_data = None
         
+        # Create demo indicator frame at the top
+        self.create_demo_indicator()
+        
         # Create notebook (tabs)
         self.notebook = ttk.Notebook(root)
-        self.notebook.pack(fill='both', expand=True, padx=10, pady=10)
+        self.notebook.pack(fill='both', expand=True, padx=10, pady=(0, 10))
         
         # Create tabs
         self.create_barangay_tab()
@@ -337,6 +350,84 @@ class LeptospirosisApp:
         self.create_simulation_tab()
         self.create_prediction_tab()
         self.create_view_data_tab()
+    
+    def create_demo_indicator(self):
+        """Create a demo indicator banner at the top of the window"""
+        demo_frame = tk.Frame(self.root, bg='#FF6B6B', height=30)
+        demo_frame.pack(fill='x', side='top', padx=10, pady=(10, 5))
+        demo_frame.pack_propagate(False)
+        
+        demo_info = self.demo_manager.get_demo_info()
+        remaining_text = f"{demo_info['remaining_hours']}h {demo_info['remaining_minutes']}m remaining"
+        
+        label = tk.Label(
+            demo_frame,
+            text=f"⚠ DEMO VERSION - {remaining_text}",
+            bg='#FF6B6B',
+            fg='white',
+            font=('Arial', 10, 'bold')
+        )
+        label.pack(expand=True)
+    
+    def show_demo_expired_screen(self):
+        """Show demo expired lock screen"""
+        # Clear the window
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        
+        # Set window size
+        self.root.geometry("600x400")
+        
+        # Create lock screen
+        lock_frame = tk.Frame(self.root, bg='#2C3E50')
+        lock_frame.pack(fill='both', expand=True)
+        
+        # Lock icon (using emoji)
+        icon_label = tk.Label(
+            lock_frame,
+            text="🔒",
+            font=('Arial', 72),
+            bg='#2C3E50',
+            fg='white'
+        )
+        icon_label.pack(pady=40)
+        
+        # Message
+        message_label = tk.Label(
+            lock_frame,
+            text="Demo Period Ended",
+            font=('Arial', 24, 'bold'),
+            bg='#2C3E50',
+            fg='white'
+        )
+        message_label.pack(pady=10)
+        
+        # Contact message
+        contact_label = tk.Label(
+            lock_frame,
+            text="Please contact the developer to continue using this application.",
+            font=('Arial', 12),
+            bg='#2C3E50',
+            fg='#BDC3C7',
+            wraplength=400
+        )
+        contact_label.pack(pady=20)
+        
+        # Close button
+        close_btn = tk.Button(
+            lock_frame,
+            text="Close",
+            command=self.root.destroy,
+            font=('Arial', 12),
+            bg='#E74C3C',
+            fg='white',
+            padx=30,
+            pady=10,
+            relief='flat',
+            cursor='hand2'
+        )
+        close_btn.pack(pady=20)
+
         
     def create_barangay_tab(self):
         tab = ttk.Frame(self.notebook)
@@ -1773,8 +1864,9 @@ def main():
         try:
             # Close all matplotlib figures to free memory
             plt.close('all')
-            # Close database connection
-            app.db.close()
+            # Close database connection (only if it exists)
+            if hasattr(app, 'db') and app.db:
+                app.db.close()
         except Exception:
             pass
         root.destroy()

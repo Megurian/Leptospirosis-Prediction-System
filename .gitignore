@@ -2,4 +2,8 @@ build/
 dist/
 leptospirosis_sim.db
 generate_synthetic_csv.py
-_pycache__/
+__pycache__/
+demo_manager.py
+reset_demo.py
+test_demo_expiration.py
+.demo_tracker
