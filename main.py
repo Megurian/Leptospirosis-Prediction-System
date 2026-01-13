@@ -524,6 +524,16 @@ NOTES:
         ttk.Button(file_control_frame, text="Browse...", command=self.browse_csv_file).pack(side='left', padx=5)
         ttk.Button(file_control_frame, text="Download Template", command=self.download_csv_template).pack(side='left', padx=5)
         
+        # Progress bar
+        progress_frame = ttk.Frame(file_frame)
+        progress_frame.pack(fill='x', pady=10)
+        
+        self.csv_progress = ttk.Progressbar(progress_frame, mode='determinate', length=400)
+        self.csv_progress.pack(side='left', padx=5)
+        
+        self.csv_progress_label = ttk.Label(progress_frame, text="", foreground='blue')
+        self.csv_progress_label.pack(side='left', padx=10)
+        
         # Preview frame
         preview_frame = ttk.LabelFrame(tab, text="Data Preview", padding=15)
         preview_frame.pack(fill='both', expand=True, padx=20, pady=10)
@@ -620,6 +630,8 @@ NOTES:
         self.csv_status_label.config(text="Preview cleared", foreground='gray')
         self.csv_parsed_data = []
         self.import_btn.config(state='disabled')
+        self.csv_progress['value'] = 0
+        self.csv_progress_label.config(text="")
     
     def load_csv_preview(self):
         """Load and validate CSV file, show preview"""
@@ -631,7 +643,19 @@ NOTES:
         # Clear previous preview
         self.clear_csv_preview()
         
+        # Reset progress bar
+        self.csv_progress['value'] = 0
+        self.csv_progress_label.config(text="Reading file...")
+        self.root.update_idletasks()
+        
         try:
+            # First pass: count total rows for progress tracking
+            with open(filepath, 'r', encoding='utf-8-sig') as f:
+                total_rows = sum(1 for line in f) - 1  # Exclude header
+            
+            self.csv_progress_label.config(text=f"Validating {total_rows} rows...")
+            self.root.update_idletasks()
+            
             with open(filepath, 'r', encoding='utf-8-sig') as f:  # utf-8-sig handles BOM
                 reader = csv.DictReader(f)
                 
@@ -646,6 +670,8 @@ NOTES:
                 
                 missing = required_cols - headers
                 if missing:
+                    self.csv_progress['value'] = 0
+                    self.csv_progress_label.config(text="")
                     messagebox.showerror("Invalid Format", 
                                        f"Missing required columns: {', '.join(missing)}\n\n"
                                        "Please check the format guide. All risk factor columns are required.")
@@ -656,9 +682,18 @@ NOTES:
                 error_count = 0
                 row_num = 1
                 parsed_data = []
+                processed_count = 0
                 
                 for row in reader:
                     row_num += 1  # Account for header
+                    processed_count += 1
+                    
+                    # Update progress every 10 rows or on last row
+                    if processed_count % 10 == 0 or processed_count == total_rows:
+                        progress = (processed_count / max(total_rows, 1)) * 100
+                        self.csv_progress['value'] = progress
+                        self.csv_progress_label.config(text=f"Processing {processed_count}/{total_rows} rows...")
+                        self.root.update_idletasks()
                     
                     # Skip empty rows
                     if not any(row.values()):
@@ -740,6 +775,11 @@ NOTES:
                 self.csv_preview_tree.tag_configure('valid', background='#d4edda')
                 self.csv_preview_tree.tag_configure('error', background='#f8d7da')
                 
+                # Complete progress
+                self.csv_progress['value'] = 100
+                self.csv_progress_label.config(text="Validation complete!")
+                self.root.update_idletasks()
+                
                 # Update status
                 if error_count > 0:
                     self.csv_status_label.config(
@@ -757,8 +797,12 @@ NOTES:
                 
                 if valid_count == 0 and error_count == 0:
                     messagebox.showwarning("Empty File", "No data rows found in CSV file")
+                    self.csv_progress['value'] = 0
+                    self.csv_progress_label.config(text="")
                     
         except Exception as e:
+            self.csv_progress['value'] = 0
+            self.csv_progress_label.config(text="Error occurred")
             messagebox.showerror("File Error", f"Failed to read CSV file:\n{str(e)}")
     
     def _parse_bool(self, value):
@@ -786,12 +830,23 @@ NOTES:
         if not confirm:
             return
         
+        # Reset progress
+        self.csv_progress['value'] = 0
+        self.csv_progress_label.config(text="Starting import...")
+        self.root.update_idletasks()
+        
         success_count = 0
         error_count = 0
         errors = []
+        total_records = len(self.csv_parsed_data)
         
         try:
-            for data in self.csv_parsed_data:
+            for idx, data in enumerate(self.csv_parsed_data, 1):
+                # Update progress
+                progress = (idx / total_records) * 100
+                self.csv_progress['value'] = progress
+                self.csv_progress_label.config(text=f"Importing {idx}/{total_records} records...")
+                self.root.update_idletasks()
                 try:
                     # First, ensure barangay exists
                     self.db.cursor.execute("SELECT id FROM barangays WHERE name=?", (data['barangay'],))
@@ -826,6 +881,11 @@ NOTES:
                     error_count += 1
                     errors.append(f"Row {data['row_num']}: {str(e)}")
             
+            # Complete progress
+            self.csv_progress['value'] = 100
+            self.csv_progress_label.config(text="Import complete!")
+            self.root.update_idletasks()
+            
             # Show results
             result_message = f"Import completed:\n\n"
             result_message += f"✓ Successfully imported: {success_count} records\n"
@@ -851,7 +911,13 @@ NOTES:
             self.clear_csv_preview()
             self.csv_file_path.set('')
             
+            # Reset progress after a short delay
+            self.root.after(1500, lambda: (self.csv_progress.config(value=0), 
+                                           self.csv_progress_label.config(text="")))
+            
         except Exception as e:
+            self.csv_progress['value'] = 0
+            self.csv_progress_label.config(text="Import failed")
             messagebox.showerror("Import Failed", f"An error occurred during import:\n{str(e)}")
     
     def create_simulation_tab(self):
