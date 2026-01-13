@@ -1,0 +1,91 @@
+Barangay,Year,Population,Cases,Flooded,Evacuation,Infrastructure_Damage,Irregular_Garbage,High_Rodents,Clogged_Drainage
+Tetuan,2019,30466,58,Yes,Yes,Yes,No,No,Yes
+Tetuan,2020,30913,2,No,No,No,No,No,Yes
+Tetuan,2021,31257,60,Yes,No,Yes,No,Yes,Yes
+Tetuan,2022,31837,11,Yes,No,No,No,No,No
+Tetuan,2023,32443,4,No,No,No,No,No,Yes
+Tetuan,2024,33058,3,No,No,No,No,Yes,No
+Santa Maria,2019,25445,28,Yes,No,Yes,No,No,No
+Santa Maria,2020,25790,39,Yes,Yes,No,Yes,Yes,Yes
+Santa Maria,2021,26214,19,Yes,Yes,No,No,No,No
+Santa Maria,2022,26608,2,No,No,No,Yes,Yes,No
+Santa Maria,2023,27106,4,No,No,No,No,Yes,No
+Santa Maria,2024,27577,2,No,No,No,Yes,No,No
+Tumaga,2019,28394,21,Yes,Yes,No,No,No,Yes
+Tumaga,2020,28905,5,No,No,No,No,No,Yes
+Tumaga,2021,29317,43,Yes,Yes,Yes,No,No,No
+Tumaga,2022,29645,23,Yes,No,No,Yes,Yes,Yes
+Tumaga,2023,30162,2,No,No,No,Yes,Yes,Yes
+Tumaga,2024,30605,36,Yes,No,Yes,No,Yes,No
+Putik,2019,22308,4,No,No,No,No,No,No
+Putik,2020,22637,4,No,No,No,Yes,Yes,Yes
+Putik,2021,22884,4,No,No,No,No,Yes,Yes
+Putik,2022,23256,3,No,No,No,No,Yes,Yes
+Putik,2023,23670,4,No,No,No,No,No,Yes
+Putik,2024,23953,25,Yes,Yes,No,No,No,Yes
+Guiwan,2019,18202,3,No,No,No,Yes,No,Yes
+Guiwan,2020,18524,22,Yes,Yes,No,No,Yes,Yes
+Guiwan,2021,18723,3,No,No,No,No,No,Yes
+Guiwan,2022,19035,1,No,No,No,No,No,No
+Guiwan,2023,19292,2,No,No,No,No,Yes,Yes
+Guiwan,2024,19528,23,Yes,Yes,No,Yes,No,Yes
+Pasonanca,2019,35466,3,No,No,No,No,No,No
+Pasonanca,2020,35883,6,No,No,No,Yes,Yes,No
+Pasonanca,2021,36531,25,Yes,Yes,No,No,No,No
+Pasonanca,2022,37155,6,No,No,No,No,No,No
+Pasonanca,2023,37539,28,Yes,Yes,No,No,No,No
+Pasonanca,2024,38166,18,Yes,No,No,No,Yes,Yes
+San Jose Gusu,2019,24379,20,Yes,Yes,No,No,Yes,No
+San Jose Gusu,2020,24712,2,No,No,No,Yes,Yes,No
+San Jose Gusu,2021,25146,32,Yes,Yes,No,Yes,Yes,Yes
+San Jose Gusu,2022,25480,1,No,No,No,No,No,Yes
+San Jose Gusu,2023,25981,1,No,No,No,No,No,Yes
+San Jose Gusu,2024,26419,1,No,No,No,Yes,Yes,Yes
+Ayala,2019,20342,3,No,No,No,No,Yes,Yes
+Ayala,2020,20571,2,No,No,No,Yes,Yes,Yes
+Ayala,2021,20927,3,No,No,No,No,No,Yes
+Ayala,2022,21154,4,No,No,No,Yes,No,No
+Ayala,2023,21502,1,No,No,No,No,No,No
+Ayala,2024,21888,2,No,No,No,No,No,No
+Talon-Talon,2019,32522,5,No,No,No,No,No,Yes
+Talon-Talon,2020,33052,50,Yes,Yes,No,No,Yes,Yes
+Talon-Talon,2021,33435,6,No,No,No,No,No,Yes
+Talon-Talon,2022,33860,2,No,No,No,No,No,No
+Talon-Talon,2023,34234,5,No,No,No,No,Yes,Yes
+Talon-Talon,2024,34781,4,No,No,No,Yes,Yes,Yes
+Calarian,2019,29312,4,No,No,No,No,Yes,Yes
+Calarian,2020,29639,4,No,No,No,No,No,Yes
+Calarian,2021,30214,3,No,No,No,No,No,Yes
+Calarian,2022,30606,44,Yes,Yes,No,Yes,Yes,No
+Calarian,2023,31008,34,Yes,Yes,Yes,No,No,No
+Calarian,2024,31542,24,Yes,Yes,No,No,Yes,No
+Baliwasan,2019,26349,26,Yes,Yes,No,Yes,Yes,No
+Baliwasan,2020,26827,4,No,No,No,Yes,Yes,Yes
+Baliwasan,2021,27317,17,Yes,Yes,No,No,No,No
+Baliwasan,2022,27737,38,Yes,Yes,No,No,Yes,Yes
+Baliwasan,2023,28263,7,Yes,No,No,No,No,No
+Baliwasan,2024,28641,4,No,No,No,No,No,No
+San Roque,2019,23452,1,No,No,No,No,No,Yes
+San Roque,2020,23800,23,Yes,Yes,No,No,No,Yes
+San Roque,2021,24206,2,No,No,No,No,No,No
+San Roque,2022,24533,2,No,No,No,Yes,No,Yes
+San Roque,2023,24904,4,No,No,No,No,Yes,Yes
+San Roque,2024,25280,34,Yes,No,Yes,No,Yes,No
+Mercedes,2019,15168,2,No,No,No,No,No,No
+Mercedes,2020,15463,2,No,No,No,Yes,No,Yes
+Mercedes,2021,15622,1,No,No,No,No,No,No
+Mercedes,2022,15802,1,No,No,No,Yes,Yes,Yes
+Mercedes,2023,16040,8,Yes,No,No,Yes,Yes,Yes
+Mercedes,2024,16304,1,No,No,No,No,No,Yes
+Vitali,2019,12208,1,No,No,No,Yes,Yes,Yes
+Vitali,2020,12367,1,No,No,No,Yes,Yes,Yes
+Vitali,2021,12498,19,Yes,Yes,No,Yes,Yes,Yes
+Vitali,2022,12624,2,No,No,No,No,Yes,No
+Vitali,2023,12788,1,No,No,No,No,Yes,Yes
+Vitali,2024,13037,0,No,No,No,Yes,Yes,No
+Curuan,2019,9102,1,No,No,No,Yes,Yes,Yes
+Curuan,2020,9247,0,No,No,No,Yes,No,No
+Curuan,2021,9422,6,Yes,Yes,No,No,No,No
+Curuan,2022,9566,5,Yes,No,No,No,Yes,Yes
+Curuan,2023,9715,1,No,No,No,No,Yes,Yes
+Curuan,2024,9826,1,No,No,No,No,Yes,Yes
