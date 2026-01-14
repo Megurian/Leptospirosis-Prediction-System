@@ -413,6 +413,26 @@ class LeptospirosisApp:
         scrollbar.pack(side='right', fill='y')
         return tree
     
+    def create_scrollable_tab(self, parent):
+        """Create a scrollable canvas container for tab content"""
+        canvas = tk.Canvas(parent, bg=ThemeColors.BG_MAIN, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas, style='Card.TFrame')
+        
+        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind("<Configure>", lambda e: canvas.itemconfig(canvas_window, width=e.width))
+        
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        return scrollable_frame
+    
     def calc_composite_risk(self, is_flooded, is_evac, is_damage, garbage, rodents, drainage):
         """Calculate composite risk index from risk factors"""
         f_score = 0.0
@@ -536,7 +556,8 @@ class LeptospirosisApp:
         tab = ttk.Frame(self.notebook, style='Card.TFrame')
         self.notebook.add(tab, text="  📍 Barangay  ")
         
-        content = ttk.Frame(tab, style='Card.TFrame')
+        scrollable_frame = self.create_scrollable_tab(tab)
+        content = ttk.Frame(scrollable_frame, style='Card.TFrame')
         content.pack(fill='both', expand=True, padx=25, pady=20)
         
         self.create_tab_header(content, "Barangay Management", "Add and manage barangay profiles")
@@ -578,7 +599,8 @@ class LeptospirosisApp:
         tab = ttk.Frame(self.notebook, style='Card.TFrame')
         self.notebook.add(tab, text="  📊 Data Entry  ")
         
-        content = ttk.Frame(tab, style='Card.TFrame')
+        scrollable_frame = self.create_scrollable_tab(tab)
+        content = ttk.Frame(scrollable_frame, style='Card.TFrame')
         content.pack(fill='both', expand=True, padx=25, pady=20)
         
         self.create_tab_header(content, "Yearly Data Entry", "Record annual leptospirosis data and risk factors")
@@ -677,20 +699,7 @@ class LeptospirosisApp:
         tab = ttk.Frame(self.notebook, style='Card.TFrame')
         self.notebook.add(tab, text="  📁 Import CSV  ")
         
-        # Scrollable canvas
-        canvas = tk.Canvas(tab, bg=ThemeColors.BG_MAIN, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(tab, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas, style='Card.TFrame')
-        
-        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.bind("<Configure>", lambda e: canvas.itemconfig(canvas_window, width=e.width))
-        canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
-        
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
+        scrollable_frame = self.create_scrollable_tab(tab)
         content = ttk.Frame(scrollable_frame, style='Card.TFrame')
         content.pack(fill='both', expand=True, padx=25, pady=20)
         
@@ -942,7 +951,8 @@ Notes: Use Yes/No or 1/0 for risk factors • Composite Risk Index calculated au
         tab = ttk.Frame(self.notebook, style='Card.TFrame')
         self.notebook.add(tab, text="  🔬 Simulation  ")
         
-        content = ttk.Frame(tab, style='Card.TFrame')
+        scrollable_frame = self.create_scrollable_tab(tab)
+        content = ttk.Frame(scrollable_frame, style='Card.TFrame')
         content.pack(fill='both', expand=True, padx=25, pady=20)
         
         self.create_tab_header(content, "SEIWR Simulation", "Run epidemiological model simulations")
@@ -1013,7 +1023,8 @@ Notes: Use Yes/No or 1/0 for risk factors • Composite Risk Index calculated au
         tab = ttk.Frame(self.notebook, style='Card.TFrame')
         self.notebook.add(tab, text="  📉 Prediction  ")
         
-        content = ttk.Frame(tab, style='Card.TFrame')
+        scrollable_frame = self.create_scrollable_tab(tab)
+        content = ttk.Frame(scrollable_frame, style='Card.TFrame')
         content.pack(fill='both', expand=True, padx=25, pady=20)
         
         self.create_tab_header(content, "Trend Prediction", "Forecast future cases with scenario analysis")
@@ -1097,7 +1108,8 @@ Notes: Use Yes/No or 1/0 for risk factors • Composite Risk Index calculated au
         tab = ttk.Frame(self.notebook, style='Card.TFrame')
         self.notebook.add(tab, text="  📋 View Data  ")
         
-        content = ttk.Frame(tab, style='Card.TFrame')
+        scrollable_frame = self.create_scrollable_tab(tab)
+        content = ttk.Frame(scrollable_frame, style='Card.TFrame')
         content.pack(fill='both', expand=True, padx=25, pady=20)
         
         self.create_tab_header(content, "Data Overview", "View, filter, and manage all recorded data")
