@@ -92,27 +92,33 @@ def build():
     else:
         target = "windows"
     
-    print(f"\n✓ Target: {target.upper()}")
+    print(f"\n[OK] Target: {target.upper()}")
     
     # Select source file
     print("\nSource File Options:")
     print("  1. main.py (with demo manager)")
     print("  2. main_no_demo.py (production, no demo features)")
     
-    source_choice = input("\nSelect source file [1-2] (default: 2): ").strip() or "2"
+    # Check if run non-interactively (e.g., CI/CD) and force defaults for Windows
+    if target == "windows" and not sys.stdin.isatty():
+        print("Running in non-interactive mode. Auto-selecting: main_no_demo.py")
+        source_choice = "2"
+    else:
+        source_choice = input("\nSelect source file [1-2] (default: 2): ").strip() or "2"
+        
     main_file = "main.py" if source_choice == "1" else "main_no_demo.py"
     
     if not os.path.exists(main_file):
-        print(f"✗ Error: {main_file} not found!")
+        print(f"[X] Error: {main_file} not found!")
         return False
     
-    print(f"✓ Using: {main_file}")
+    print(f"[OK] Using: {main_file}")
     
     # 1. Install PyInstaller if not present
     print("\n[1/4] Checking PyInstaller...")
     try:
         import PyInstaller
-        print("  ✓ PyInstaller is installed")
+        print("  [OK] PyInstaller is installed")
     except ImportError:
         print("  Installing PyInstaller...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
@@ -122,7 +128,7 @@ def build():
     if target == "windows":
         print("\n[2/4] Generating Version Metadata (Windows)...")
         version_file = create_version_info()
-        print("  ✓ Created version_info.txt")
+        print("  [OK] Created version_info.txt")
     else:
         print("\n[2/4] Skipping version metadata (not needed for Linux/macOS)")
     
@@ -187,9 +193,9 @@ def build():
     try:
         print(f"  Running: {' '.join(build_cmd)}\n")
         subprocess.check_call(build_cmd)
-        print("\n  ✓ Build successful!")
+        print("\n  [OK] Build successful!")
     except subprocess.CalledProcessError as e:
-        print(f"\n  ✗ Build failed: {e}")
+        print(f"\n  [X] Build failed: {e}")
         return False
     finally:
         # Cleanup temp version file
@@ -200,7 +206,7 @@ def build():
     print("=" * 70)
     
     # Platform-specific instructions
-    print(f"\n✓ Output location: {output_msg}")
+    print(f"\n[OK] Output location: {output_msg}")
     
     if target == "windows":
         print("\n📋 FOR YOUR CLIENT (Windows PC):")
