@@ -153,7 +153,7 @@ def build():
             return False
 
         mode = "--onedir"
-        exe_name = "LeptospirosisPredictor.exe"
+        exe_name = "LeptospirosisPredictor"
         output_msg = "dist\\LeptospirosisPredictor\\LeptospirosisPredictor.exe"
     elif target == "linux":
         mode = "--onedir"
