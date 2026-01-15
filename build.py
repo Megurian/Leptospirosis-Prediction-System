@@ -209,20 +209,20 @@ def build():
     print(f"\n[OK] Output location: {output_msg}")
     
     if target == "windows":
-        print("\n📋 FOR YOUR CLIENT (Windows PC):")
+        print("\n[INFO] FOR YOUR CLIENT (Windows PC):")
         print("  1. Copy the entire 'dist/LeptospirosisPredictor' folder to their PC")
         print("  2. Run LeptospirosisPredictor.exe")
-        print("\n⚠️  NOTE ON VIRUS WARNINGS:")
+        print("\n[NOTE] NOTE ON VIRUS WARNINGS:")
         print("  If Windows SmartScreen warns them, it's because the app is unsigned.")
         print("  They should click 'More Info' -> 'Run Keep/Run Anyway'")
         print("  If Antivirus deletes it, ask them to add an exclusion.")
     elif target == "linux":
-        print("\n📋 FOR LINUX:")
+        print("\n[INFO] FOR LINUX:")
         print(f"  1. Navigate to dist/LeptospirosisPredictor/")
         print(f"  2. Run: ./LeptospirosisPredictor")
         print(f"  3. Or make it executable: chmod +x LeptospirosisPredictor && ./LeptospirosisPredictor")
     else:  # macOS
-        print("\n📋 FOR macOS:")
+        print("\n[INFO] FOR macOS:")
         print("  1. The app is in dist/LeptospirosisPredictor.app")
         print("  2. Double-click to run, or use Terminal:")
         print(f"  3. open dist/LeptospirosisPredictor.app")
