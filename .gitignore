@@ -1,5 +1,6 @@
 build/
 dist/
+.venv/
 leptospirosis_sim.db
 generate_synthetic_csv.py
 __pycache__/
